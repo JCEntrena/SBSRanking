@@ -14,8 +14,8 @@ class Analyzer:
         self.players = self.smash.tournament_show_players(self.tournament, self.event)
         self.all_sets = self.smash.tournament_show_sets(self.tournament, self.event)
         # Para imprimir
-        self.winners = 'W'
-        self.losers = 'L'
+        self.winners = 'w'
+        self.losers = 'l'
 
     def print_data_winners(self, file_to_write, sets):
         for current_set in sets:
@@ -70,7 +70,7 @@ class Analyzer:
                         break
 
         # Sacamos al archivo.
-        f = open("./Data/data_redfox", 'w')
+        f = open("./Data/data_redfox.txt", 'w')
         self.print_data_winners(f, sets_played_winners)
         self.print_data_losers(f, sets_played_losers)
         f.close()
@@ -78,5 +78,5 @@ class Analyzer:
 
 if __name__ == '__main__':
 
-    analyze = Analyzer('redfox-2018-winter-1', 'domingo-smash-4-singles', 'B')
+    analyze = Analyzer('redfox-2018-winter-1', 'domingo-smash-4-singles', 'b')
     analyze.get_data()
