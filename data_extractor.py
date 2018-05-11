@@ -52,19 +52,17 @@ class Analyzer:
         #sets_played_losers = [[item['entrant_1_id'], item['entrant_2_id'], item['winner_id']] for item in sets if "loser" in item['full_round_text'].lower()]
 
         # Reordenamos para quedarnos con perdedor-ganador en todos los sets.
-        # Lo hacemos en winners y losers.
         for n, _set in enumerate(sets_played):
-            sets_played_winners[n] = list(_set[0:2])
+            sets_played[n] = list(_set[0:2])
             if _set[2] == _set[0]:
-                sets_played_winners[n].reverse()
+                sets_played[n].reverse()
 
         # Sustituímos el id por el tag del jugador.
-        # De nuevo en winners y losers.
         for n, _set in enumerate(sets_played):
             for m, player in enumerate(_set):
                 for p in players_and_ids:
                     if p[1] == int(player):
-                        sets_played_winners[n][m] = p[0]
+                        sets_played[n][m] = p[0]
                         break
 
         # Sacamos al archivo.
