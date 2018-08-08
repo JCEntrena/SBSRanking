@@ -9,11 +9,11 @@ require 'challonge-api'
 
 # Set params.
 Challonge::API.username = 'SmashBrosSpain'
-Challonge::API.key = '' # KEEP PRIVATE
+Challonge::API.key = 'TYd05AbGSdR2WuEp1dtfmhPSimChv6cGOOJuRebE' # KEEP PRIVATE
 
 # Season dates
-@season_begin = Date.new(2017, 8, 26)
-@season_end = Date.new(2018, 2, 24)
+@season_begin = Date.new(2018, 2, 25)
+@season_end = Date.new(2018, 8, 6)
 
 # Get tournaments.
 tournaments = Challonge::Tournament.find(:all)
@@ -26,15 +26,18 @@ tournaments.each do |tournament|
   name = tournament.name.clone
   name.tr!(' ', '')
   # Participants.
+  placings = []
   tournament_participants = []
   tournament.participants.each do |player|
+    placings << [player.name.clone, player.final_rank]
+    placings.sort!{|a, b| a[1] <=> b[1]}
     tournament_participants << [player.name.clone, player.id]
   end
 
   matches_list = tournament.matches.clone
   # Remove pools
   matches_list.select!{|match| match.group_id == nil}
-  # Divide in winners and losers (not necessary)
+  # Divide in winners and losers
   # Challonge has negative round number for sets in losers.
   matches_winners = matches_list.select{|match| match.round > 0}
   matches_losers = matches_list.select{|match| match.round < 0}
@@ -44,13 +47,24 @@ tournaments.each do |tournament|
   matches_list.each do |match|
     winner = tournament_participants.find{|x| x.last == match.winner_id}.first.tr(' ', '')
     loser = tournament_participants.find{|x| x.last == match.loser_id}.first.tr(' ', '')
-    sets << [loser, winner, 'c']
+    sets << [loser, winner]
   end
 
   # File for writing
   file = File.new('./Data/data_' + name + '.txt', "w+")
 
   # Writing
+  file.puts name
+  # file.puts tier
+  file.puts tournament.participants.size
+  file.write("\n")
+
+  placings.each do |player|
+    file.write(player.join(' ') + "\n")
+  end
+
+  file.write("\n")
+
   sets.each do |set|
     file.write(set.join(' ') + "\n")
   end

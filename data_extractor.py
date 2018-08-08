@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# DATA EXTRACTOR FOR SMASHGG, USING SMASHGG API.
 
 import pysmash   # Requiere pip install pysmash. Más información: https://github.com/PeterCat12/pysmash
 import os
@@ -33,14 +34,25 @@ class Analyzer:
             file_to_write.write(' %s %s\n' % (self.tier, self.losers))
 
     # Método de impresión general, sin considerar losers o winners.
-    def print_data(self, file_to_write, sets):
+    def print_sets(self, file_to_write, sets):
         for current_set in sets:
             # Añade tags eliminando espacios (para operar mejor en el futuro).
             file_to_write.write(' '.join(str(x).replace(' ', '') for x in current_set))
             # Añade tier y salto de línea. La tier debería automatizarse en el futuro, dependiendo del torneo.
-            file_to_write.write(' %s\n' % self.tier)
+            file_to_write.write('\n')
+
+    def print_placements(self, file_to_write, placements):
+        for element in placements:
+            file_to_write.write(' '.join(str(x).replace(' ', '') for x in element))
+            # Añade salto de línea
+            file_to_write.write("\n")
 
     def get_data(self):
+        # Posiciones
+        player_placements = [[x["tag"], x["final_placement"]] for x in self.players]
+        player_placements.sort(key=lambda x: x[1])
+
+        # Sets
         # Para reemplazar los ids con los tags de los jugadores.
         players_and_ids = [[p['tag'], p['entrant_id']] for p in self.players]
         # Elimina sets con DQs.
@@ -67,7 +79,12 @@ class Analyzer:
 
         # Sacamos al archivo.
         f = open("./Data/data_sal-del-pozo-3", 'w')
-        self.print_data(f, sets_played)
+        f.write(self.tournament + "\n")
+        f.write(self.tier + "\n")
+        f.write(str(len(player_placements)) + "\n\n")
+        self.print_placements(f, player_placements)
+        f.write("\n")
+        self.print_sets(f, sets_played)
         f.close()
 
 
