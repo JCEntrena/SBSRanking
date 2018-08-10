@@ -10,6 +10,7 @@ Created on Tue Mar 13 09:31:32 2018
 #you recalculate it's score based on the score of a similar node 
 #f.e: Recalculate a tier2 foreign player doing the avg of nodes 3,4,5
 
+import mysql.connector
 
 class Win:
     def __init__(self,idL,mult):
@@ -33,8 +34,23 @@ graph = []
 sim_graph = []
 graph_order_act = []
 graph_order_old = []
-len_graph = 22 #Numero de players registrados en la DB que no son extranjeros
+len_graph = 0
+cnx = None
 
+def db_connex():
+    global cnx
+    cnx = mysql.connector.connect(user='Kakarot',password='292Hikotsu',host='localhost',database='sys')
+    
+def get_graphsize():
+    global len_graph
+    global cnx
+    cursor = cnx.cursor()
+    query = "SELECT LAST_PID FROM usr_ids  WHERE IDENTIFIER = 'ACT'"
+    cursor.execute(query)
+    for t in cursor:
+        len_graph = t[0] + 1
+    cnx.close()
+    
 def init_graph():
     global graph
     for i in range(0,len_graph):
@@ -88,6 +104,7 @@ def act_foreign_nodes():
 
 def read_graph():
     global graph_order_act
+    global len_graph
     with open ("h2h_dbdata.txt", "r") as myfile:
         data=myfile.readlines()
     for interaccion in data:
@@ -114,7 +131,9 @@ def read_graph():
             graph[aW].win.append(win)
         else:
             graph[aL].lse.append(aW)
-    graph_order_act = range(0,150)
+    for i in range(0,len_graph):
+        graph[i].win = sorted(graph[i].win,key=lambda x: x.idL,reverse=True)
+    graph_order_act = range(0,len_graph)
 
 def pagerank():
     global graph
@@ -183,6 +202,8 @@ def converge():
         return False
 
 def Main():
+    db_connex()
+    get_graphsize()
     init_graph()
     read_graph()
     #gen_foreign_nodes()
