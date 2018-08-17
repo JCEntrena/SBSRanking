@@ -27,14 +27,14 @@ def read_data():
     global number_players
     global players
     global matches
-    with open ("data_1.txt", "r") as myfile:
+    with open ("smashgg_data_smash-zone-xvi.txt", "r",encoding="utf8") as myfile:
         data=myfile.readlines()
     tourney_name = data[0]
     tourney_tier = data[1]
     number_players = int(data[2])
     for i in range(4,4+number_players):
         spc = data[i].index(" ")
-        players.append(player(data[i][:spc],data[i][spc+1:len(data[i])-1]))
+        players.append(player(data[i][:spc].lower(),data[i][spc+1:len(data[i])-1]))
     for i in range(4+number_players+1,len(data)):
         matches.append(data[i][:len(data[i])-1])
 
@@ -90,7 +90,7 @@ def db_insertplayers(player_db,last_id,player_db_full):
                 player_db.append(player.name)
                 query = "INSERT INTO usr_gen (NICKNAME,PLAYER_ID) VALUES ('" + player.name + "'," + str(last_id) + ")"
                 cursor.execute(query)
-                query = "INSERT INTO usr_pla_2018 (PLAYER_ID,STIER1,REG1,REG2,REG3) VALUES (" + str(last_id) + ",0,0,0,0)"
+                query = "INSERT INTO usr_pla_2018 (PLAYER_ID,STIER1,REG1,REG2,REG3,TOT) VALUES (" + str(last_id) + ",0,0,0,0,0)"
                 cursor.execute(query)
         query = "UPDATE usr_ids SET LAST_PID=" + str(last_id) + " WHERE IDENTIFIER = 'ACT'"
         cursor.execute(query)
@@ -113,21 +113,40 @@ def db_insertplacings(player_db_full,player_db):
                 for slot in campo:
                     pla_array.append(slot)
             pla_array = pla_array[1:]
+            tot = pla_array[0] + pla_array[1] + pla_array[2] + pla_array[3]
             if tourney_tier == "S":
                 if Decimal(player.punt) > pla_array[0]:
                     query = "UPDATE usr_pla_2018 SET STIER1=" + str(Decimal(player.punt)) + " WHERE PLAYER_ID = " + str(pid)
                     cursor.execute(query)
+                    tot = tot - pla_array[0] + Decimal(player.punt)
             else:
                 pla_array = pla_array[1:]
                 if Decimal(player.punt) > pla_array[0]:
                     query = "UPDATE usr_pla_2018 SET REG1=" + str(Decimal(player.punt)) + " WHERE PLAYER_ID = " + str(pid)
                     cursor.execute(query)
+                    tot = tot - pla_array[0] + Decimal(player.punt)
+                    if pla_array[0] > pla_array[1]:
+                        query = "UPDATE usr_pla_2018 SET REG2=" + str(pla_array[0]) + " WHERE PLAYER_ID = " + str(pid)
+                        cursor.execute(query)
+                        tot = tot - pla_array[1] + pla_array[0]
+                        if pla_array[1] > pla_array[2]:
+                            query = "UPDATE usr_pla_2018 SET REG3=" + str(pla_array[1]) + " WHERE PLAYER_ID = " + str(pid)
+                            cursor.execute(query)
+                            tot = tot - pla_array[2] + pla_array[1]
                 elif Decimal(player.punt) > pla_array[1]:
                     query = "UPDATE usr_pla_2018 SET REG2=" + str(Decimal(player.punt)) + " WHERE PLAYER_ID = " + str(pid)
                     cursor.execute(query)
+                    tot = tot - pla_array[1] + Decimal(player.punt)
+                    if pla_array[1] > pla_array[2]:
+                        query = "UPDATE usr_pla_2018 SET REG3=" + str(pla_array[1]) + " WHERE PLAYER_ID = " + str(pid)
+                        cursor.execute(query)
+                        tot = tot - pla_array[2] + pla_array[1]
                 elif Decimal(player.punt) > pla_array[2]:
                     query = "UPDATE usr_pla_2018 SET REG3=" + str(Decimal(player.punt)) + " WHERE PLAYER_ID = " + str(pid) 
                     cursor.execute(query)
+                    tot = tot - pla_array[2] + Decimal(player.punt)
+            query = "UPDATE usr_pla_2018 SET TOT=" + str(tot) + " WHERE PLAYER_ID = " + str(pid)
+            cursor.execute(query)
     cnx.commit()
             
 def db_inserth2h(player_db_full,player_db):
@@ -169,6 +188,4 @@ def Main():
         db_inserth2h(player_db_full, player_db)
     cnx.close()
         
-Main()
-    
-    
+Main()    

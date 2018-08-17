@@ -11,6 +11,7 @@ Created on Tue Mar 13 09:31:32 2018
 #f.e: Recalculate a tier2 foreign player doing the avg of nodes 3,4,5
 
 import mysql.connector
+import math
 
 class Win:
     def __init__(self,idL,mult):
@@ -21,7 +22,10 @@ class Node:
         self.i = i
         self.win = []
         self.lse = []
+        self.tot = {}
+        self.nwin = {}
         self.p = 100
+        self.p2 = 100
     
 class Sim_Node:
     def __init__(self,i,sim):
@@ -36,7 +40,7 @@ graph_order_act = []
 graph_order_old = []
 len_graph = 0
 cnx = None
-
+farm_total_f = [None,1,0.97,0.94,0.89,0.812,0.76,0.72286,0.695,0.6733,0.656]
 def db_connex():
     global cnx
     cnx = mysql.connector.connect(user='Kakarot',password='292Hikotsu',host='localhost',database='sys')
@@ -49,7 +53,6 @@ def get_graphsize():
     cursor.execute(query)
     for t in cursor:
         len_graph = t[0] + 1
-    cnx.close()
     
 def init_graph():
     global graph
@@ -102,6 +105,27 @@ def act_foreign_nodes():
         node.p = p/len(node.sim)
         node.nlse = nlse/len(node.sim)
 
+def append2dic(aW,aL):
+    global graph
+    if aL in graph[aW].tot:
+        graph[aW].tot[aL] += 1
+    else:
+        graph[aW].tot[aL] = 1
+    if aW in graph[aL].tot:
+        graph[aL].tot[aW] += 1
+    else:
+        graph[aL].tot[aW] = 1
+    if aL in graph[aW].nwin:
+        graph[aW].nwin[aL] += 1
+    else:
+        graph[aW].nwin[aL] = 1
+def append2dic_L(aW,aL):
+    global graph
+    if aW in graph[aL].tot:
+        graph[aL].tot[aW] += 1
+    else:
+        graph[aL].tot[aW] = 1
+
 def read_graph():
     global graph_order_act
     global len_graph
@@ -127,6 +151,7 @@ def read_graph():
         if aW < len(graph) and aL < len(graph):
             graph[aW].win.append(win)
             graph[aL].lse.append(aW)
+            append2dic(aW,aL)
         elif aW < len(graph):
             graph[aW].win.append(win)
         else:
@@ -135,25 +160,37 @@ def read_graph():
         graph[i].win = sorted(graph[i].win,key=lambda x: x.idL,reverse=True)
     graph_order_act = range(0,len_graph)
 
+def act_points():
+    global graph
+    global sim_graph
+    global len_graph
+    for i in range(0,len_graph):
+        graph[i].p2 = graph[i].p
+    
+def normalize_i():
+    global graph
+    global len_graph
+    suma = 0
+    for i in range(0,len_graph):
+        suma += graph[i].p
+    for i in range(0,len_graph):
+        graph[i].p2 *= len_graph*100/suma
+        graph[i].p *= len_graph*100/suma
+    
+
 def pagerank():
     global graph
     global sim_graph
     global len_graph
-    d = 0.85
-    for node in graph:
+    global farm_total_f
+    for ki in range(0,len_graph):
         farmfactor = 1
         win_ant = -1
-        pr = 0
-        for win in node.win:
+        pr = graph[ki].p2
+        for win in graph[ki].win:
             #si es una win dentro del grafo de SBS:
             if win.idL < len_graph:
-                if win_ant == win.idL:
-                    farmfactor -=0.1
-                    if farmfactor < 0.5:
-                        farmfactor = 0.5
-                else:
-                    farmfactor = 1
-                pr += graph[win.idL].p/len(graph[win.idL].lse) * farmfactor * win.mult
+                pr += graph[win.idL].p2/graph[ki].tot[win.idL] * win.mult * graph[ki].nwin[win.idL] * farm_total_f[graph[ki].nwin[win.idL]]
                 win_ant = win.idL
             #si es una win contra un nodo simulado:
             else:
@@ -165,9 +202,11 @@ def pagerank():
                     farmfactor = 1
                 pr += sim_graph[win.idL-2000].p/sim_graph[win.idL-2000].nlse * farmfactor * win.mult
                 win_ant = win.idL
-        prc = (1 - d)/len_graph + d
-        node.p = pr + prc
-        
+        graph[ki].p = pr
+    act_points()
+    normalize_i()
+   
+    
 def printG():
     global graph
     for node in sorted(graph,key=lambda x: x.p):
@@ -200,6 +239,21 @@ def converge():
         return True
     else:
         return False
+    
+def act_wl():
+    global cnx
+    global graph
+    global len_graph
+    cursor = cnx.cursor()
+    for player in graph:
+        nwin = len(player.win)
+        nlse = len(player.lse)
+        pid = player.i
+        query = "UPDATE usr_gen SET WINS =" + str(nwin) + " WHERE PLAYER_ID = " + str(pid)
+        cursor.execute(query)
+        query = "UPDATE usr_gen SET LOSES =" + str(nlse) + " WHERE PLAYER_ID = " + str(pid)
+        cursor.execute(query)
+    cnx.commit()
 
 def Main():
     db_connex()
@@ -208,20 +262,22 @@ def Main():
     read_graph()
     #gen_foreign_nodes()
     iterations = 0
-    while (iterations < 20):
+    while (iterations < 500):
         #act_foreign_nodes()
         pagerank()
         iterations += 1
 # =============================================================================
 #     while (1):
-#         act_foreign_nodes()
+#         #act_foreign_nodes()
 #         pagerank()
 #         iterations += 1
 #         if (converge()):
 #             break
 # =============================================================================
+    print("Number of iterations done: {0}".format(iterations))    
     normalize()
     printS()
-    print("Number of iterations done: {0}".format(iterations))
+    act_wl()
+    cnx.close()
     
 Main()
